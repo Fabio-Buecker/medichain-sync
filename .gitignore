@@ -1,0 +1,33 @@
+# Ambientes virtuais e cache do Python.
+# Exclui o padrão .venv/ do controle de versão Git.
+.venv/
+# Exclui o padrão __pycache__/ do controle de versão Git.
+__pycache__/
+# Exclui o padrão *.py[cod] do controle de versão Git.
+*.py[cod]
+
+# Bancos e dados gerados localmente.
+# Exclui o padrão data/ do controle de versão Git.
+data/
+# Exclui o padrão *.db do controle de versão Git.
+*.db
+# Exclui o padrão *.db-journal do controle de versão Git.
+*.db-journal
+
+# Arquivos locais de ambiente e IDE.
+# Exclui o padrão .env do controle de versão Git.
+.env
+# Exclui o padrão .idea/ do controle de versão Git.
+.idea/
+# Exclui o padrão .vscode/ do controle de versão Git.
+.vscode/
+
+# Mantém apenas o README entre os documentos versionados nesta entrega.
+*.md
+!README.md
+# Slides, relatórios e materiais de apoio ficam somente no computador.
+*.pdf
+*.ppt
+*.pptx
+*.docx
+*.zip

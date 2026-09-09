@@ -1,0 +1,15 @@
+# Nao envia artefatos locais para a imagem Docker.
+# Exclui o padrão __pycache__/ do contexto enviado ao Docker.
+__pycache__/
+# Exclui o padrão *.py[cod] do contexto enviado ao Docker.
+*.py[cod]
+# Exclui o padrão data/ do contexto enviado ao Docker.
+data/
+# Exclui o padrão tests/ do contexto enviado ao Docker.
+tests/
+# Exclui o padrão *.md do contexto enviado ao Docker.
+*.md
+# Exclui o padrão .git/ do contexto enviado ao Docker.
+.git/
+# Exclui o padrão .env do contexto enviado ao Docker.
+.env
