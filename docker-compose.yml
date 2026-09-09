@@ -1,0 +1,144 @@
+# Define configurações compartilhadas por todos os workers e dá nome à âncora YAML
+x-worker-environment: &worker_environment
+  # Define o endereço do broker na rede Docker
+  RABBITMQ_HOST: rabbitmq
+  # Define a pasta interna onde ficam os bancos
+  DATA_DIR: /data
+  # Lista os IDs, nomes de host e portas TCP usados na eleição
+  WORKER_PEERS: 1:worker1:6001,2:worker2:6002,3:worker3:6003
+  # Define o intervalo entre verificações do líder, em segundos
+  HEARTBEAT_INTERVAL: 1.0
+  # Define quantas falhas consecutivas disparam uma eleição
+  HEARTBEAT_FAILURES: 3
+
+# Agrupa os containers que compõem a aplicação
+services:
+  # RabbitMQ funciona como o coracao assincrono da arquitetura.
+  # Identifica o serviço RabbitMQ ou sua dependência neste bloco
+  rabbitmq:
+    # Seleciona a imagem e a versão utilizadas no container
+    image: rabbitmq:3.13-management
+    # Define o nome de host do container
+    hostname: rabbitmq
+    # Lista os mapeamentos entre portas do computador e do container
+    ports:
+      # Expõe a porta interna 15672 na porta externa 15673 por padrão
+      - "${RABBITMQ_UI_HOST_PORT:-15673}:15672"
+    # Configura a verificação de saúde do serviço
+    healthcheck:
+      # Executa o comando que verifica se o nó RabbitMQ responde
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      # Define o intervalo entre verificações de saúde
+      interval: 5s
+      # Limita a duração de cada verificação
+      timeout: 5s
+      # Define o número de falhas para considerar o serviço sem saúde
+      retries: 12
+
+  # O gateway recebe JSON por Socket TCP e publica a atualizacao na fila.
+  # Define o serviço que recebe atualizações por TCP
+  gateway:
+    # Constrói a imagem com o Dockerfile desta pasta
+    build: .
+    # Define o módulo Python executado quando o container inicia
+    command: ["python", "-m", "src.gateway"]
+    # Agrupa as variáveis de ambiente disponíveis ao processo
+    environment:
+      # Define o endereço do broker na rede Docker
+      RABBITMQ_HOST: rabbitmq
+      # Faz o servidor escutar nas interfaces internas do container
+      GATEWAY_HOST: 0.0.0.0
+      # Define a porta TCP interna do gateway
+      GATEWAY_PORT: 5000
+    # Lista os mapeamentos entre portas do computador e do container
+    ports:
+      # Expõe a porta interna 5000 na porta externa 15000 por padrão
+      - "${GATEWAY_HOST_PORT:-15000}:5000"
+    # Declara serviços que precisam iniciar antes deste
+    depends_on:
+      # Identifica o serviço RabbitMQ ou sua dependência neste bloco
+      rabbitmq:
+        # Aguarda o healthcheck do RabbitMQ aprovar sua inicialização
+        condition: service_healthy
+
+  # Os tres workers usam a mesma imagem e mudam apenas ID, porta e endereco.
+  # Define o processo independente do Worker 1
+  worker1:
+    # Constrói a imagem com o Dockerfile desta pasta
+    build: .
+    # Define o módulo Python executado quando o container inicia
+    command: ["python", "-m", "src.worker"]
+    # Agrupa as variáveis de ambiente disponíveis ao processo
+    environment:
+      # Herda as variáveis da âncora worker_environment
+      <<: *worker_environment
+      # Define o número deste worker, usado nos vetores e no Bully
+      WORKER_ID: 1
+      # Documenta a porta deste worker; neste código a porta é lida de WORKER_PEERS
+      COORDINATION_PORT: 6001
+    # Declara volumes persistentes ou montagens, conforme a posição neste arquivo
+    volumes:
+      # Monta o mesmo volume de dados em /data neste worker
+      - medichain_data:/data
+    # Declara serviços que precisam iniciar antes deste
+    depends_on:
+      # Identifica o serviço RabbitMQ ou sua dependência neste bloco
+      rabbitmq:
+        # Aguarda o healthcheck do RabbitMQ aprovar sua inicialização
+        condition: service_healthy
+
+  # Define o processo independente do Worker 2
+  worker2:
+    # Constrói a imagem com o Dockerfile desta pasta
+    build: .
+    # Define o módulo Python executado quando o container inicia
+    command: ["python", "-m", "src.worker"]
+    # Agrupa as variáveis de ambiente disponíveis ao processo
+    environment:
+      # Herda as variáveis da âncora worker_environment
+      <<: *worker_environment
+      # Define o número deste worker, usado nos vetores e no Bully
+      WORKER_ID: 2
+      # Documenta a porta deste worker; neste código a porta é lida de WORKER_PEERS
+      COORDINATION_PORT: 6002
+    # Declara volumes persistentes ou montagens, conforme a posição neste arquivo
+    volumes:
+      # Monta o mesmo volume de dados em /data neste worker
+      - medichain_data:/data
+    # Declara serviços que precisam iniciar antes deste
+    depends_on:
+      # Identifica o serviço RabbitMQ ou sua dependência neste bloco
+      rabbitmq:
+        # Aguarda o healthcheck do RabbitMQ aprovar sua inicialização
+        condition: service_healthy
+
+  # Define o processo independente do Worker 3
+  worker3:
+    # Constrói a imagem com o Dockerfile desta pasta
+    build: .
+    # Define o módulo Python executado quando o container inicia
+    command: ["python", "-m", "src.worker"]
+    # Agrupa as variáveis de ambiente disponíveis ao processo
+    environment:
+      # Herda as variáveis da âncora worker_environment
+      <<: *worker_environment
+      # Define o número deste worker, usado nos vetores e no Bully
+      WORKER_ID: 3
+      # Documenta a porta deste worker; neste código a porta é lida de WORKER_PEERS
+      COORDINATION_PORT: 6003
+    # Declara volumes persistentes ou montagens, conforme a posição neste arquivo
+    volumes:
+      # Monta o mesmo volume de dados em /data neste worker
+      - medichain_data:/data
+    # Declara serviços que precisam iniciar antes deste
+    depends_on:
+      # Identifica o serviço RabbitMQ ou sua dependência neste bloco
+      rabbitmq:
+        # Aguarda o healthcheck do RabbitMQ aprovar sua inicialização
+        condition: service_healthy
+
+# Declara volumes persistentes ou montagens, conforme a posição neste arquivo
+volumes:
+  # Um volume nomeado preserva os bancos mesmo quando os containers param.
+  # Declara o volume nomeado compartilhado pelos três workers
+  medichain_data:
